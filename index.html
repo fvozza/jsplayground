@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Francesco's JS/Leaflet playground</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Learning javascript, leaftlet and misc web 2.0 stuff..." />
+    <meta name="keywords" content="leaflet, users, map, javascript, cloudmade" />
+    <meta name="author" content="Francesco Vozza <fvozza at gmail dot com>" />
+    <link type="text/css" rel="stylesheet" href="http://fonts.googleapis.com/css?family=Norican">
+    <link rel="stylesheet" href="lib/Leaflet/leaflet.css" />
+    <!--[if lte IE 8]><link rel="stylesheet" href="lib/Leaflet/leaflet.ie.css" /><![endif]-->
+
+    <!-- Le styles -->
+
+    <!-- Bootstrap stylesheets (not used for now)
+
+    <link href="lib/bootstrap/css/bootstrap.css" rel="stylesheet">
+    <link href="lib/bootstrap/css/bootstrap-responsive.css" rel="stylesheet">
+    -->
+
+    <style type="text/css">
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        position: absolute;
+        overflow:hidden;
+      }
+      #map {
+        margin-top:20px;
+        width:100%;
+        height:100%;
+      }
+      .geolocation {
+        position: absolute;
+        left: 0;
+        top: 0;
+        margin-left: 10px;
+        margin-top: 65px;
+        padding: 5px;
+        background: rgba(0, 0, 0, 0.25);
+        border-radius: 7px;
+        -moz-border-radius: 7px;
+        -webkit-border-radius: 7px;
+        color: rgba(255, 255, 255, 1);
+        z-index: 100;
+      }
+      .geolocation a {
+        background-color: rgba(255, 255, 255, 0.75);
+        background-position: 50% 50%;
+        background-repeat: no-repeat;
+        background-image: url(img/location.png);
+        display: block;
+        -moz-border-radius: 4px;
+        -webkit-border-radius: 4px;
+        border-radius: 4px;
+        width: 19px;
+        height: 19px;
+      }
+      .geolocation a:hover {
+        background-color: #fff;
+      }
+    </style>
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+      <script type="text/javascript">
+      WebFontConfig = {
+        google: {
+            families: ['Norican::latin']
+        }
+      };
+      (function () {
+        var wf = document.createElement('script');
+        wf.src = ('https:' == document.location.protocol ? 'https' : 'http') + '://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js';
+        wf.type = 'text/javascript';
+        wf.async = 'true';
+        var s = document.getElementsByTagName('script')[0];
+        s.parentNode.insertBefore(wf, s);
+      })();
+      </script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+    <div id="map"></div>
+
+    <div class="geolocation">
+      <a href="#" onclick="geoLocate(); return false;" title="My Location"></a>
+    </div>
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script type="text/javascript" src="lib/Leaflet/leaflet.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    
+
+    <!-- Bootstrap stuff (not used for now)
+    <script src="lib/bootstrap/js/bootstrap.min.js"></script>
+    -->
+
+    <script type="text/javascript">
+      var map, mapquest;
+
+      mapquest = new L.TileLayer("http://{s}.mqcdn.com/tiles/1.0.0/osm/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+        subdomains: ["otile1", "otile2", "otile3", "otile4"],
+        attribution: 'Tiles Courtesy of <a href="http://www.mapquest.com/" target="_blank">MapQuest</a>. Map data (c) <a href="http://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors, CC-BY-SA.'
+      });
+
+      map = new L.Map('map', {
+        center: new L.LatLng(52.5233, 13.4127),
+        zoom: 12,
+        layers: [mapquest]
+      });
+
+      map.addControl(new L.Control.Scale());
+
+      $(document).ready(function() {
+        $.ajaxSetup({cache:false});
+        $('#map').css('height', ($(window).height() - 0));
+
+	 			map.addEventListener('locationfound', onLocationFound);
+      });
+
+			$(document).keypress(function(e) {
+	  		switch (e.which) {
+	    		case 'f'.charCodeAt(0):
+	      		flickrHandler();
+	      		break;
+	    		default:
+	      		break;
+	  		}
+			});
+
+      $(window).resize(function () {
+        $('#map').css('height', ($(window).height() - 0));
+      }).resize();
+
+      function geoLocate() {
+        map.locate({setView: true, maxZoom: 17});
+      }
+
+      function onLocationFound(e) {
+
+				var marker = new L.Marker(e.latlng);
+
+				marker.bindPopup('<bi>Accuracy: </b>' + e.accuracy + ' m');
+				marker.addEventListener('dblclick', onMarkerDblClick);
+				map.addLayer(marker);
+
+      }
+
+      function onMarkerDblClick(e) {
+				map.removeLayer(e.target);
+      }
+
+      function flickrHandler() {
+
+				console.log("Flickr starting...");
+
+				$.getJSON("http://api.flickr.com/services/rest/?flickr.photos.search", {
+  				api_key: "77434274c00481c749079d158f11ac71",
+					tags: "berlin",
+  				format: "json",
+  				jsoncallback: "?"
+					}, function(data) {
+						console.log(data);
+					});
+      }
+
+</script>
+
+</body>
+</html>
