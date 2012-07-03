@@ -7,17 +7,10 @@
     <meta name="description" content="Learning javascript, leaftlet and misc web 2.0 stuff..." />
     <meta name="keywords" content="leaflet, users, map, javascript, cloudmade" />
     <meta name="author" content="Francesco Vozza <fvozza at gmail dot com>" />
-    <link type="text/css" rel="stylesheet" href="http://fonts.googleapis.com/css?family=Norican">
     <link rel="stylesheet" href="lib/Leaflet/leaflet.css" />
-    <!--[if lte IE 8]><link rel="stylesheet" href="lib/Leaflet/leaflet.ie.css" /><![endif]-->
-
-    <!-- Le styles -->
-
-    <!-- Bootstrap stylesheets (not used for now)
-
     <link href="lib/bootstrap/css/bootstrap.css" rel="stylesheet">
     <link href="lib/bootstrap/css/bootstrap-responsive.css" rel="stylesheet">
-    -->
+    <!--[if lte IE 8]><link rel="stylesheet" href="lib/Leaflet/leaflet.ie.css" /><![endif]-->
 
     <style type="text/css">
       html, body {
@@ -29,16 +22,19 @@
         overflow:hidden;
       }
       #map {
-        margin-top:20px;
+        margin-top:40px;
         width:100%;
         height:100%;
+      }
+      .navbar .nav > li > a {
+        padding: 13px 10px 11px;
       }
       .geolocation {
         position: absolute;
         left: 0;
         top: 0;
         margin-left: 10px;
-        margin-top: 65px;
+        margin-top: 105px;
         padding: 5px;
         background: rgba(0, 0, 0, 0.25);
         border-radius: 7px;
@@ -62,51 +58,128 @@
       .geolocation a:hover {
         background-color: #fff;
       }
+			.spinner {
+				width: 32;
+				height: 32;
+			  border-radius: 5px;
+				margin: 15px 10px 0 0;
+			}
+			.status {
+				color: #aaa;
+				width: 140px;
+				height: 20px;
+				margin: 12px 0 0 10px;
+				border-radius: 5px;
+			}
     </style>
 
-    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
-    <!--[if lt IE 9]>
-      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
-      <script type="text/javascript">
-      WebFontConfig = {
-        google: {
-            families: ['Norican::latin']
-        }
-      };
-      (function () {
-        var wf = document.createElement('script');
-        wf.src = ('https:' == document.location.protocol ? 'https' : 'http') + '://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js';
-        wf.type = 'text/javascript';
-        wf.async = 'true';
-        var s = document.getElementsByTagName('script')[0];
-        s.parentNode.insertBefore(wf, s);
-      })();
-      </script>
-    <![endif]-->
   </head>
 
   <body>
+
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <ul class="nav">
+						<li class="spinner" id="spinner" title="Loading"></li>
+						<li id="status" class="status"></li>
+            <li><a data-toggle="modal" href="#helpModal"><i class="icon-question-sign icon-white"></i> Help </a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
 
     <div id="map"></div>
 
     <div class="geolocation">
       <a href="#" onclick="geoLocate(); return false;" title="My Location"></a>
     </div>
-
+    
     <!-- Le javascript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="lib/Leaflet/leaflet.js"></script>
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-    
-
-    <!-- Bootstrap stuff (not used for now)
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
     <script src="lib/bootstrap/js/bootstrap.min.js"></script>
-    -->
+    <script src="lib/spin.min.js"></script>
+
+		<!-- Modal UI elements -->
+				
+		<div class="modal hide" id="helpModal">
+  		<div class="modal-header">
+        <a class="close" data-dismiss="modal">×</a>
+    		<h3>Javascript playground</h3>
+    		<h5>(c) 2012 - Francesco Vozza</h5>
+  		</div>
+  		<div class="modal-body">
+    		<p><b>[ f ]</b> Triggers Flickr handler</p>
+    		<p><b>[ t ]</b> Triggers Twitter handler</p>
+    		<p><b>[ c ]</b> Clear all Map layers</p>
+  		</div>
+		</div>
 
     <script type="text/javascript">
+    
       var map, mapquest;
-
+			var my_position_marker = new L.Marker();
+		
+			var flickr_map_layer = new L.LayerGroup();
+			var twitter_map_layer = new L.LayerGroup();
+			
+			var loadingFinished = jQuery.Event("loadingFinished");
+			
+			$("body").bind("loadingFinished", function(e) {
+				spinner.spin(document.getElementById('spinner'));
+				var s = $("#status");
+				s[0].innerHTML = "Paused";
+		
+				spinner.stop();
+		
+			});
+			
+			var FlickrIcon = L.Icon.extend(
+				{options: {
+			    iconUrl: "img/camera_32.png",
+			    shadowUrl: null,
+			    iconSize: new L.Point(32, 32),
+			    shadowSize: new L.Point(0, 0),
+			    iconAnchor: new L.Point(0, 0),
+			    popupAnchor: new L.Point(0, 0)
+			   }
+			});
+						
+			var TwitterIcon = L.Icon.extend(
+				{options: {
+			    iconUrl: "img/twitter_32.png",
+			    shadowUrl: null,
+			    iconSize: new L.Point(32, 32),
+			    shadowSize: new L.Point(0, 0),
+			    iconAnchor: new L.Point(0, 0),
+			    popupAnchor: new L.Point(0, 0)
+			   }
+			});
+				
+			var twitter_icon = new TwitterIcon();
+		
+			var spinner_opts = {
+			  lines: 9, // The number of lines to draw
+			  length: 2, // The length of each line
+			  width: 2, // The line thickness
+			  radius: 4, // The radius of the inner circle
+			  rotate: 19, // The rotation offset
+			  color: 'GhostWhite', // #rgb or #rrggbb
+			  speed: 1.0, // Rounds per second
+			  trail: 76, // Afterglow percentage
+			  shadow: false, // Whether to render a shadow
+			  hwaccel: false, // Whether to use hardware acceleration
+			  className: 'spinner', // The CSS class to assign to the spinner
+			  zIndex: 2e9, // The z-index (defaults to 2000000000)
+			  top: 'auto', // Top position relative to parent in px
+			  left: 'auto' // Left position relative to parent in px
+			};
+			
+			var spinner = new Spinner(spinner_opts);
+								
       mapquest = new L.TileLayer("http://{s}.mqcdn.com/tiles/1.0.0/osm/{z}/{x}/{y}.png", {
         maxZoom: 18,
         subdomains: ["otile1", "otile2", "otile3", "otile4"],
@@ -116,7 +189,7 @@
       map = new L.Map('map', {
         center: new L.LatLng(52.5233, 13.4127),
         zoom: 12,
-        layers: [mapquest]
+        layers: [mapquest, flickr_map_layer, twitter_map_layer]
       });
 
       map.addControl(new L.Control.Scale());
@@ -133,6 +206,15 @@
 	    		case 'f'.charCodeAt(0):
 	      		flickrHandler();
 	      		break;
+	    		case 't'.charCodeAt(0):
+	      		twitterHandler();
+	      		break;
+	      	case '?'.charCodeAt(0):
+	      		$('#helpModal').modal('show');
+	    			break;
+	      	case 'c'.charCodeAt(0):
+	      		clearLayers([flickr_map_layer, twitter_map_layer]);
+	    			break;
 	    		default:
 	      		break;
 	  		}
@@ -142,39 +224,182 @@
         $('#map').css('height', ($(window).height() - 0));
       }).resize();
 
+			function setStatus(status) {
+				spinner.spin(document.getElementById('spinner'));
+				var s = $("#status");
+				s[0].innerHTML = status;	
+			}
+
+			function clearStatus(status) {
+				spinner.spin(document.getElementById('spinner'));
+				var s = $("#status");
+				s[0].innerHTML = "";	
+			}
+			
       function geoLocate() {
+
+				setStatus("Finding your location...");
+				spinner.spin(document.getElementById('spinner'));
         map.locate({setView: true, maxZoom: 17});
+        
+        setTimeout(function() {
+        	clearStatus(); 
+        	spinner.stop();
+        }, 5000);
+
       }
 
       function onLocationFound(e) {
 
-				var marker = new L.Marker(e.latlng);
+				map.removeLayer(my_position_marker);
+				flickr_map_layer.clearLayers();
+				
+				my_position_marker = new L.Marker(e.latlng, {draggable: true});
+				
+				my_position_marker.bindPopup('<bi>Accuracy: </b>' + e.accuracy + ' m');
+				my_position_marker.addEventListener('dblclick', onMarkerDblClick);
+				map.addLayer(my_position_marker);
 
-				marker.bindPopup('<bi>Accuracy: </b>' + e.accuracy + ' m');
-				marker.addEventListener('dblclick', onMarkerDblClick);
-				map.addLayer(marker);
-
+				spinner.stop();
       }
 
       function onMarkerDblClick(e) {
 				map.removeLayer(e.target);
       }
 
+			function getMyPosition() {
+				
+				var def_latlng = {lat: 52.5233, lng: 13.4127}; // Berlin
+				
+				var latlng = my_position_marker.getLatLng();
+				if (latlng === undefined) {latlng = def_latlng};
+				
+				return latlng;
+			}
+
+			function clearLayers(layers) {
+				for (i=0; i<layers.length; i++) {
+					layers[i].clearLayers();
+				}
+			}
+      
       function flickrHandler() {
 
-				console.log("Flickr starting...");
+				setStatus("Loading Flickr...");
+				
+				var ll = getMyPosition();
+								
+				console.log("Flickr starting...["+ll.lat+","+ll.lng+"]");
 
-				$.getJSON("http://api.flickr.com/services/rest/?flickr.photos.search", {
+  			flickr_map_layer.clearLayers();
+
+				$.getJSON("http://api.flickr.com/services/rest/?", {
+  				method: "flickr.photos.search",
   				api_key: "77434274c00481c749079d158f11ac71",
-					tags: "berlin",
+					//lat: 52.5233, 
+					//lon: 13.4127,
+					lat: ll.lat,
+					lon: ll.lng,
+					has_geo: 1,
+					accuracy: 11,
   				format: "json",
-  				jsoncallback: "?"
-					}, function(data) {
-						console.log(data);
-					});
+  				nojsoncallback: 1
+  				}, function(data) {
+  					console.log("Number of photos found: " + data.photos.photo.length);
+						$.each(data.photos.photo, function(i, photo) {
+								flickrPhotoGetLocation(photo.id, photo.title, (data.photos.photo.length - i - 1));
+						})
+				  });
+      }
+      
+      function flickrPhotoGetLocation(id, title, n) {
+
+				$.getJSON("http://api.flickr.com/services/rest/?", {
+  				method: "flickr.photos.geo.getLocation",
+  				api_key: "77434274c00481c749079d158f11ac71",
+					photo_id: id,
+  				format: "json",
+  				nojsoncallback: 1					
+					}, function(location_data) {
+							
+		      	$.getJSON("http://api.flickr.com/services/rest/?", {
+		      		method: "flickr.photos.getSizes",
+		  				api_key: "77434274c00481c749079d158f11ac71",
+							photo_id: id,
+		  				format: "json",
+		  				nojsoncallback: 1
+		  				}, function (size_data) {
+							
+								var flickr_icon = new FlickrIcon();
+
+								var thumbnail_url = size_data.sizes.size[2].source;
+								var latlng = new L.LatLng(location_data.photo.location.latitude, location_data.photo.location.longitude);
+								var flickr_marker = new L.Marker(latlng, {icon: flickr_icon});
+								flickr_marker.bindPopup(
+								"<img src=" + thumbnail_url +">" + 
+								"<p><b>" + title + "</b></p>"
+								);
+								flickr_map_layer.addLayer(flickr_marker);
+
+								//console.log(n);
+				 				if (n === 0) { $("body").trigger(loadingFinished); }
+
+						 })						 
+					})
+      }
+      
+      function twitterHandler() {
+      
+				console.log("Twitter starting...");
+
+				setStatus("Loading Twitter...");
+      
+				var ll = getMyPosition();
+				var next_page;
+
+  			twitter_map_layer.clearLayers();
+				twitterSearch(1, ll);
+
       }
 
-</script>
+			function twitterSearch(page, location) {
+      	$.getJSON("http://search.twitter.com/search.json?callback=?", {
+	      		q: "",
+	      		rpp: 100,
+	      		lan: "en",
+	      		page: page,
+	      		geocode: "" + location.lat + "," + location.lng + "," + "10km"
+	       	}, function(data) {
+	       		//console.log(data);
+	       		if (data.error) { console.log(data.error); return; }
+	      		$.each(data.results, function(i, tweet) {
+	      			if (tweet.geo != null) {
+	      				//console.log(tweet.geo, tweet.text);
+	      			
+								var latlng = new L.LatLng(tweet.geo.coordinates[0], tweet.geo.coordinates[1]);
+								var twitter_marker = new L.Marker(latlng, {icon: twitter_icon});
+								var popup_text = replaceURLWithHTMLLinks(tweet.text);
+								console.log(popup_text);
+								twitter_marker.bindPopup(popup_text);
+								twitter_map_layer.addLayer(twitter_marker);
+	      				
+	      			}
+	      		})
+	       		if (data.next_page && data.page<10) {
+	       			twitterSearch(page+1 ,location);
+	       		} else {
+	       			$("body").trigger(loadingFinished);
+	       		}
+				});
+			}
 
+			function replaceURLWithHTMLLinks(text) {
+				str = text.replace(/(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig, function($0) { 
+					return "<a href=\"" + $0 + "\" target=\"_blank\">" + $0 + "</a>"
+				});
+				return str;
+			}
+
+</script>
 </body>
 </html>
